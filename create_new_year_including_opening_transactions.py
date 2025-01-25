@@ -7,15 +7,24 @@ from gnucash.gnucash_core_c import ACCT_TYPE_EQUITY, ACCT_TYPE_ASSET
 from loguru import logger
 from datetime import datetime
 
-# List of account types to include in the opening transactions
+# Account types of top-level accounts whose decendents are to be
+# considered for creating opening transactions
 ACCOUNT_TYPES_TO_INCLUDE = [ACCT_TYPE_ASSET]
 
 def get_account_balances(book, account_types):
-    """get account balances for specified account types, skipping placeholder accounts"""
+    """Get account balances.
+
+    Get account balances, considering only top-level accounts of
+    specified account types, and their descendants.
+    """
     balances = {}
-    for account in book.get_root_account().get_descendants():
-        if account.GetType() in account_types and not account.GetPlaceholder():
-            balances[account.get_full_name()] = account.GetBalance()
+    root_account = book.get_root_account()
+    top_level_accounts = [acc for acc in root_account.get_children() if acc.GetType() in account_types]
+
+    for top_account in top_level_accounts:
+        for account in top_account.get_descendants():
+            if not account.GetPlaceholder():
+                balances[account.get_full_name()] = account.GetBalance()
     return balances
 
 def prepare_new_year_file(previous_file, new_file):
