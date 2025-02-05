@@ -3,13 +3,13 @@
 import argparse
 import shutil
 import gnucash
-from gnucash.gnucash_core_c import ACCT_TYPE_EQUITY, ACCT_TYPE_ASSET
+from gnucash.gnucash_core_c import ACCT_TYPE_EQUITY, ACCT_TYPE_ASSET, ACCT_TYPE_LIABILITY
 from loguru import logger
 from datetime import datetime
 
 # Account types of top-level accounts whose decendents are to be
 # considered for creating opening transactions
-ACCOUNT_TYPES_TO_INCLUDE = [ACCT_TYPE_ASSET]
+ACCOUNT_TYPES_TO_INCLUDE = [ACCT_TYPE_ASSET, ACCT_TYPE_LIABILITY]
 
 def get_account_balances(book, account_types):
     """Get account balances.
@@ -66,7 +66,7 @@ def main(previous_file, new_file, equity_name, equity_opening_name, opening_tran
     book_new = session_new.book
 
     # Get the commodity (e.g., EUR)
-    transaction_currency = book_new.get_table().lookup("CURRENCY", "EUR")
+    transaction_currency = book_new.get_table().lookup("CURRENCY", "USD")
     price_db = book_new.get_price_db();
 
     # Create or retrieve the Opening Balances account
@@ -143,9 +143,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create opening transactions for a new year in GnuCash.")
     parser.add_argument("previous_file", help="The GnuCash file for the previous year.")
     parser.add_argument("new_file", help="The GnuCash file for the new year.")
-    parser.add_argument("--equity_name", default="Eigenkapital", help="The name of top level equity account (placeholder).")
-    parser.add_argument("--equity_opening_name", default="Anfangsbestand", help="The name of the equity opening account.")
-    parser.add_argument("--opening_transaction_text", default="Anfangsbestand", help="The text for the opening transaction.")
+    parser.add_argument("--equity_name", default="Equity", help="The name of top level equity account (placeholder).")
+    parser.add_argument("--equity_opening_name", default="Opening balance", help="The name of the equity opening account.")
+    parser.add_argument("--opening_transaction_text", default="Opening balance", help="The text for the opening transaction.")
     parser.add_argument("--opening_date", default="2025-01-01", help="The date for the opening transaction in ISO 8601 format (YYYY-MM-DD).")
 
     args = parser.parse_args()
