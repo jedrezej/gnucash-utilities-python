@@ -45,6 +45,8 @@ def prepare_new_year_file(previous_file, new_file):
         splits = account.GetSplitList()
         for split in splits:
             transaction = split.parent
+            if transaction == None:
+                continue;
             transaction.Destroy()
 
     return session_new
