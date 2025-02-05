@@ -64,7 +64,8 @@ def main(previous_file, new_file, equity_name, equity_opening_name, opening_tran
     book_new = session_new.book
 
     # Get the commodity (e.g., EUR)
-    eur_commodity = book_new.get_table().lookup("CURRENCY", "EUR")
+    transaction_currency = book_new.get_table().lookup("CURRENCY", "EUR")
+    price_db = book_new.get_price_db();
 
     # Create or retrieve the Opening Balances account
     logger.info(f"preparing opening balances counter account in new year's file")
@@ -87,7 +88,7 @@ def main(previous_file, new_file, equity_name, equity_opening_name, opening_tran
         equity_account = gnucash.Account(book_new)
         equity_account.SetName(equity_opening_name)
         equity_account.SetType(ACCT_TYPE_EQUITY)
-        equity_account.SetCommodity(eur_commodity)
+        equity_account.SetCommodity(transaction_currency)
         equity_placeholder_account.append_child(equity_account)
 
     # Create opening transactions in the new year's book for specified account types
@@ -100,21 +101,34 @@ def main(previous_file, new_file, equity_name, equity_opening_name, opening_tran
                 account = gnucash.Account(book_new)
                 account.SetName(account_name)
                 book_new.get_root_account().append_child(account)
+
             # Create opening balance transaction
             transaction = gnucash.Transaction(book_new)
             transaction.BeginEdit()
+
+            split_asset = gnucash.Split(book_new)
+            split_asset.SetParent(transaction)
+            split_asset.SetAccount(account)
+
+            split_equity = gnucash.Split(book_new)
+            split_equity.SetParent(transaction)
+            split_equity.SetAccount(equity_account)
+
+            asset_commodity = split_asset.GetAccount().GetCommodity()
+            equity_commodity = split_equity.GetAccount().GetCommodity();
+
+            equity_value = balance if (asset_commodity == equity_commodity) else price_db.convert_balance_nearest_price_t64(balance, asset_commodity, equity_commodity, opening_date)
+
             # Set the currency for the transaction
-            transaction.SetCurrency(eur_commodity)
             transaction.SetDescription(opening_transaction_text)
             transaction.SetDate(opening_date.day, opening_date.month, opening_date.year)
-            split_asset = gnucash.Split(book_new)
-            split_asset.SetAccount(account)
-            split_asset.SetValue(balance)
-            split_equity = gnucash.Split(book_new)
-            split_equity.SetAccount(equity_account)
-            split_equity.SetValue(-balance)  # Opposite value to balance the transaction
-            split_asset.SetParent(transaction)
-            split_equity.SetParent(transaction)
+            split_asset.SetAmount(balance)
+            split_asset.SetValue(equity_value)
+
+            split_equity.SetAmount(equity_value.neg())  # Opposite value to balance the transaction
+            split_equity.SetValue(equity_value.neg())
+            transaction.SetCurrency(transaction_currency)
+
             transaction.CommitEdit()
 
     # Save the new book
